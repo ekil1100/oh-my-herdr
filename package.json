@@ -1,0 +1,17 @@
+{
+  "name": "oh-my-herdr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automatic task names and terminal IDs for Herdr App",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": "^22.21.0 || >=24.5.0" },
+  "bin": { "oh-my-herdr": "src/main.mjs" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "install:app": "node scripts/install.mjs",
+    "uninstall:app": "node scripts/install.mjs --uninstall"
+  },
+  "pi": { "extensions": ["./integrations/pi.js"] },
+  "dependencies": { "proper-lockfile": "4.1.2" }
+}
