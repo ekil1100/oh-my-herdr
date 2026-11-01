@@ -10,8 +10,9 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "install:app": "node scripts/install.mjs",
-    "uninstall:app": "node scripts/install.mjs --uninstall"
+    "uninstall:app": "node scripts/install.mjs --uninstall",
+    "install:agents": "node scripts/install.mjs --agents-only",
+    "uninstall:agents": "node scripts/install.mjs --agents-only --uninstall"
   },
-  "pi": { "extensions": ["./integrations/pi.js"] },
   "dependencies": { "proper-lockfile": "4.1.2" }
 }

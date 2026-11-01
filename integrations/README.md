@@ -15,27 +15,19 @@ node src/main.mjs --help
 node --test test/*.test.mjs
 ```
 
-Load the Pi extension for one invocation:
+Agent integrations are managed by the Herdr App installer:
 
 ```sh
-pi --extension /absolute/path/to/oh-my-herdr/integrations/pi.js
+npm run install:app        # Interface and detected agent integrations
+npm run install:agents     # Integrations only
+npm run uninstall:agents   # Remove only owned integrations
 ```
 
-For persistent installation, merge this entry into the existing `extensions` array in `~/.pi/agent/settings.json`, then run `/reload` in Pi:
+The installer writes `~/.pi/agent/extensions/oh-my-herdr.js`, merges lifecycle hooks into Claude's `settings.json` and Codex's `hooks.json`, and appends a marked hook block to Kimi's `config.toml`. It respects `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `KIMI_CODE_HOME`. Codex must have `hooks = true` in `[features]`.
 
-```json
-{
-  "extensions": ["/absolute/path/to/oh-my-herdr/integrations/pi.js"]
-}
-```
+Ownership and interrupted-write recovery are recorded in `integration-installation.json` under the naming configuration directory. Reinstallation is idempotent. Uninstallation removes only managed entries and preserves unrelated user configuration. Modified managed entries produce a conflict instead of being overwritten. Pi's previous package entry for this repository is removed after the managed adapter is installed. Keep the repository at its installed location; adapters reference it directly.
 
-The package declares its Pi extension, so the recommended persistent installation is:
-
-```sh
-pi install /absolute/path/to/oh-my-herdr
-```
-
-Use one installation method. Keep the entry point beside this package's `src/` directory; copying `pi.js` alone breaks its relative import.
+Reload existing Pi sessions and restart other existing agents after installing or removing integrations. Outside an hc terminal, all adapters remain inactive.
 
 ## Configuration
 
@@ -63,7 +55,7 @@ Supported naming providers are `deepseek` and `openai`, with optional `baseUrl`.
 }
 ```
 
-The classifier reads `TYPESAFE_API_KEY`. It can also specify `baseUrl`. URLs require HTTPS except for loopback HTTP. Custom `apiKeyEnv` fields remain unsupported. The extension inherits Pi's environment; watch inherits its launching shell's environment. Provider configuration is read only when a new text snapshot needs classification. Bind, pause, cached checks, and unbound checks require no API credentials. Errors contain safe codes, never provider response bodies or credentials.
+The classifier reads `TYPESAFE_API_KEY`. It can also specify `baseUrl`. URLs require HTTPS except for loopback HTTP. Custom `apiKeyEnv` fields remain unsupported. The adapters inherit their agent's environment; watch inherits its launching shell's environment. Provider configuration is read only when a new text snapshot needs classification. Bind, pause, cached checks, and unbound checks require no API credentials. Errors contain safe codes, never provider response bodies or credentials.
 
 ## Commands and hooks
 
@@ -82,7 +74,7 @@ node src/main.mjs unbind t7
 node src/main.mjs watch --interval 15
 ```
 
-For `check`, `rename`, `pause`, `resume`, and `unbind`, omitting the terminal uses `HC_TERMINAL_ID`. An hc terminal name is resolved to its address before requests are queued. `bind` always requires its terminal, agent, and absolute session file path. It does not require the session file to exist yet. No session directory is searched and no session is selected by cwd or modification time.
+For `check`, `rename`, `pause`, `resume`, and `unbind`, omitting the terminal uses `HC_TERMINAL_ID`. An hc terminal name is resolved to its address before requests are queued. `bind` always requires its terminal, agent, and absolute session file path. It does not require the session file to exist yet. Managed Kimi hooks search workspace directories for an exact session ID and validate `state.json`; duplicate IDs are rejected. Sessions are never selected by cwd or modification time.
 
 Binding labels are:
 
@@ -99,14 +91,18 @@ Repeated binding to the same agent and path preserves the token and pause state.
 
 Pi 1.4.0 exposes session replacement through `session_start` with reason `new`, `resume`, or `fork`; it has no separate `session_switch` event. The extension:
 
-- Binds `ctx.sessionManager.getSessionFile()` on every `session_start`.
+- Binds `ctx.sessionManager.getSessionFile()` on interactive `session_start`; headless RPC/print sessions are excluded.
 - Invalidates the old binding in `session_shutdown` for new/resume/fork. Reload and quit retain the binding and pause state.
 - Schedules checks on user/text assistant `message_end`, `agent_start`, `agent_end`, `agent_settled`, and `session_tree`.
 - Runs checks asynchronously with a 100 ms debounce and one active check per extension runtime. A follow-up runs if another event arrives during a check.
 - Ignores tool-result and tool-call-only messages. Content-derived snapshot revisions also prevent provider calls on tool-only and metadata updates.
 - Uses `check <terminal> --session <absolute-path>` to reject late hooks from another session. The same guard is available for `unbind`.
 
-Pi hooks are sufficient for ordinary Pi use. Use `watch` for explicitly bound Claude, Codex, or Kimi sessions, or as a retry mechanism. Watch scans live terminals, queues only supported explicit bindings, and waits 15 seconds after each pass. Accepted intervals are 5–300 seconds. SIGINT/SIGTERM stop it after the current bounded operation. It does not start agents or a service.
+Claude, Codex, and Kimi use `src/agent-hook.mjs` through their native `SessionStart`, `UserPromptSubmit`, `Stop`, and `SessionEnd` hooks. Start/submit binds the exact session and launches a detached check worker. Stop checks only the matching binding; session end clears only the matching binding. Known subagent payloads are ignored. Naming provider work runs outside the hook process. Claude/Codex transcript IDs are checked against the hook ID when the file exists. Kimi Code 2.3.3 resolves `state.json` by exact ID and reads `agents/main/wire.jsonl` (protocol 1.5), including branch selection and undo.
+
+All managed integrations trigger checks. Optional `watch` retries existing bindings. It scans live terminals, queues only supported explicit bindings, and waits 15 seconds after each pass. Accepted intervals are 5–300 seconds. SIGINT/SIGTERM stop it after the current bounded operation. It does not start agents or a service.
+
+Codex may switch the displayed thread among already loaded threads without a lifecycle hook. A later session-start or user-submit event updates the binding. A view-only switch does not guarantee an immediate name update; background Stop events never rebind another thread.
 
 CLI output is JSON lines. Expected statuses include `bound`, `unbound`, `renamed`, `unchanged`, `same_task`, `uncertain`, `no_text`, `paused`, `external_name_paused`, `superseded`, `stale_result`, and `pending`. Invalid invocation/setup exits nonzero. A queued processing failure reports `pending` with a safe error code and retains its request for a later check or watch pass; callers should inspect that status even when the process exits zero.
 

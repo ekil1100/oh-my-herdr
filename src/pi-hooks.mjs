@@ -3,10 +3,10 @@ import { fileURLToPath } from 'node:url';
 
 const cli = fileURLToPath(new URL('./main.mjs', import.meta.url));
 
-export function runCli(args) {
+export function runCli(args, env = process.env) {
   return new Promise((resolve, reject) => {
     execFile(process.execPath, ['--use-env-proxy', cli, ...args], {
-      env: process.env, timeout: 90000, maxBuffer: 256 * 1024,
+      env, timeout: 90000, maxBuffer: 256 * 1024,
     }, (error, stdout) => {
       if (error) reject(new Error('request_hook_failed'));
       else resolve(stdout);
@@ -15,7 +15,7 @@ export function runCli(args) {
 }
 
 // Kept separate from the Pi entry point so lifecycle ordering can be tested without Pi.
-export function registerPiHooks(pi, run = runCli, env = process.env) {
+export function registerPiHooks(pi, run = (args) => runCli(args, env), env = process.env) {
   const terminal = env.HC_TERMINAL_ID;
   if (!terminal) return;
   let session;
@@ -45,6 +45,8 @@ export function registerPiHooks(pi, run = runCli, env = process.env) {
     } finally { running = false; }
   }
   pi.on('session_start', async (_event, ctx) => {
+    // Headless child sessions inherit HC_TERMINAL_ID but do not own its terminal.
+    if (ctx.mode !== 'tui') return;
     const current = ++generation;
     active = false;
     session = ctx.sessionManager.getSessionFile();

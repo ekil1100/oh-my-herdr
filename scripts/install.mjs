@@ -1,9 +1,10 @@
-import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { installIntegrations, uninstallIntegrations } from '../src/integration-install.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const home = process.env.HERDR_APP_HOME || resolve(homedir(), '.config/herdr-app');
@@ -18,17 +19,34 @@ function replaceOnce(text, before, after) {
   return text.replace(before, after);
 }
 
+async function manageIntegrations(uninstall) {
+  const outcomes = await (uninstall ? uninstallIntegrations : installIntegrations)({
+    root, home: homedir(), configHome,
+  });
+  for (const outcome of outcomes) console.log(JSON.stringify(outcome));
+  if (outcomes.some(({ status }) => status === 'error')) {
+    throw new Error('Some agent integrations need attention; resolve the reported errors and rerun this command.');
+  }
+}
+
 async function main() {
-  if (process.argv.includes('--uninstall')) {
+  const uninstall = process.argv.includes('--uninstall');
+  if (process.argv.includes('--agents-only')) {
+    await manageIntegrations(uninstall);
+    return;
+  }
+  if (uninstall) {
+    await manageIntegrations(true);
     const saved = JSON.parse(await readFile(manifestPath, 'utf8'));
     app('do', 'layout.switch', '--name', saved.previousLayout);
-    console.log('Original layout restored. Personal mods, labels and naming configuration are retained.');
+    console.log('Original layout restored and managed agent integrations removed. Personal mods, labels and naming configuration are retained. Reload or restart existing agents.');
     return;
   }
   await mkdir(configHome, { recursive: true, mode: 0o700 });
   const status = json('status');
   let manifest = existsSync(manifestPath) ? JSON.parse(await readFile(manifestPath, 'utf8')) : null;
-  const layoutName = 'oh-my-herdr';
+  const layoutName = 'OhMyHerdr';
+  const legacyLayout = manifest?.layout === 'oh-my-herdr' ? manifest.layout : null;
   const agentsName = 'oh-my-herdr-agents';
   const paneName = 'oh-my-herdr-pane';
   // Compute every patch before mutating the user's installation.
@@ -57,11 +75,14 @@ async function main() {
     'const name = terminalLabel(p.terminal, terminals().find(k => k.address === p.terminal), p.title || p.program?.name || "shell");');
   pane = replaceOnce(pane, '.child(name))', '.child(name).tooltip(name))');
   // Record ownership before cloning so a failed check can be retried safely.
+  if (legacyLayout && existsSync(resolve(home, 'layouts', layoutName + '.json'))) {
+    throw new Error('Existing Oh My Herdr layout is not owned by this installation.');
+  }
   if (!manifest) {
     for (const target of [agentsName, paneName]) {
       if (existsSync(resolve(home, 'mods', target))) throw new Error(`Existing mod is not owned by this installation: ${target}`);
     }
-    if (existsSync(resolve(home, 'layouts', layoutName + '.json'))) throw new Error('Existing oh-my-herdr layout is not owned by this installation.');
+    if (existsSync(resolve(home, 'layouts', layoutName + '.json'))) throw new Error('Existing Oh My Herdr layout is not owned by this installation.');
     manifest = { previousLayout: status.layout, layout: layoutName, mods: [agentsName, paneName] };
     await writeJSON(manifestPath, manifest);
   }
@@ -78,8 +99,10 @@ async function main() {
     console.log(app('check', folder).trim());
   }
   const layoutPath = resolve(home, 'layouts', layoutName + '.json');
-  if (!existsSync(layoutPath)) app('do', 'layout.clone', JSON.stringify({ name: manifest.previousLayout, as: layoutName }));
+  if (!existsSync(layoutPath)) app('do', 'layout.clone', JSON.stringify({ name: legacyLayout || manifest.previousLayout, as: layoutName }));
   const layout = JSON.parse(await readFile(layoutPath, 'utf8'));
+  await copyFile(resolve(root, 'ui/layout-preview.svg'), resolve(home, 'layouts/oh-my-herdr.svg'));
+  layout.preview = 'layouts/oh-my-herdr.svg';
   function visit(value) {
     if (!value || typeof value !== 'object') return;
     if (value.mod === 'agents') value.mod = agentsName;
@@ -89,7 +112,11 @@ async function main() {
   visit(layout);
   await writeJSON(layoutPath, layout);
   app('do', 'layout.switch', '--name', layoutName);
-  console.log('Installed oh-my-herdr. Run npm run uninstall:app to restore the previous layout.');
+  manifest.layout = layoutName;
+  await writeJSON(manifestPath, manifest);
+  if (legacyLayout) await unlink(resolve(home, 'layouts', legacyLayout + '.json'));
+  await manageIntegrations(false);
+  console.log('Installed oh-my-herdr and its managed agent integrations. Reload Pi; restart other existing agents. Run npm run uninstall:app to uninstall.');
   console.log(app('status'));
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

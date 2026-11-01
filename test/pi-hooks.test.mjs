@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { registerPiHooks } from '../src/pi-hooks.mjs';
 
-function fixture(run) {
+function fixture(run, mode = 'tui') {
   const handlers = new Map(), calls = [];
   const pi = { on: (event, handler) => handlers.set(event, handler) };
   registerPiHooks(pi, async (args) => { calls.push(args); return run?.(args); }, { HC_TERMINAL_ID: 't1' });
-  const context = (path) => ({ sessionManager: { getSessionFile: () => path }, hasUI: false });
+  const context = (path) => ({ sessionManager: { getSessionFile: () => path }, hasUI: false, mode });
   const emit = (event, payload = {}, path = '/one.jsonl') => handlers.get(event)?.(payload, context(path));
   return { handlers, calls, emit };
 }
@@ -62,6 +62,17 @@ test('Pi session switch proceeds while model check is pending; new session gets 
   await delay(10);
   assert.deepEqual(f.calls.at(-1), ['check', 't1', '--session', '/two.jsonl']);
   await f.emit('session_shutdown', { reason: 'quit' });
+});
+
+test('Pi headless children do not replace the terminal binding', async () => {
+  for (const mode of ['rpc', 'print', 'json']) {
+    const f = fixture(undefined, mode);
+    await f.emit('session_start');
+    await f.emit('agent_start');
+    await f.emit('session_shutdown', { reason: 'new' });
+    await delay(130);
+    assert.deepEqual(f.calls, []);
+  }
 });
 
 test('Pi without HC_TERMINAL_ID or a persistent session launches no CLI', async () => {

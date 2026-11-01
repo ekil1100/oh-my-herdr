@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="448" height="248" viewBox="0 0 448 248">
+  <rect width="448" height="248" rx="12" fill="#101214"/>
+  <!-- Workspace sidebar and task list mirror the installed layout. -->
+  <path d="M12 0h96v248H12a12 12 0 0 1-12-12V12A12 12 0 0 1 12 0" fill="#191c20"/>
+  <g fill="#737d8b">
+    <rect x="14" y="17" width="45" height="4" rx="2"/>
+    <rect x="14" y="124" width="35" height="4" rx="2"/>
+  </g>
+  <rect x="8" y="31" width="92" height="24" rx="5" fill="#2c3541"/>
+  <g fill="#97b9e3">
+    <rect x="15" y="38" width="10" height="10" rx="3"/>
+    <rect x="33" y="41" width="54" height="4" rx="2"/>
+  </g>
+  <rect x="15" y="66" width="10" height="10" rx="3" fill="#80b8a1"/>
+  <rect x="15" y="94" width="10" height="10" rx="3" fill="#ae9ccd"/>
+  <g fill="#727b87">
+    <rect x="33" y="69" width="43" height="4" rx="2"/>
+    <rect x="33" y="97" width="55" height="4" rx="2"/>
+  </g>
+  <rect x="8" y="139" width="92" height="29" rx="5" fill="#272d36"/>
+  <circle cx="18" cy="150" r="3" fill="#97b9e3"/>
+  <circle cx="18" cy="183" r="3" fill="#80b8a1"/>
+  <g fill="#a8b1bd">
+    <rect x="28" y="147" width="62" height="4" rx="2"/>
+    <rect x="28" y="180" width="49" height="4" rx="2"/>
+  </g>
+  <g fill="#565f6c">
+    <rect x="28" y="157" width="38" height="3" rx="1.5"/>
+    <rect x="28" y="190" width="42" height="3" rx="1.5"/>
+  </g>
+  <!-- Active tab, two terminal panes, and the bottom status bar. -->
+  <rect x="118" y="9" width="83" height="18" rx="5" fill="#303a48"/>
+  <rect x="128" y="16" width="60" height="4" rx="2" fill="#b5c9e4"/>
+  <rect x="214" y="16" width="44" height="4" rx="2" fill="#687281"/>
+  <g stroke="#343d49" fill="#14181e">
+    <rect x="118" y="35" width="194" height="192" rx="6" stroke="#8daed6"/>
+    <rect x="320" y="35" width="118" height="192" rx="6"/>
+  </g>
+  <path d="M119 60h192M321 60h116" stroke="#343d49"/>
+  <g fill="#a8bcd7">
+    <rect x="129" y="45" width="18" height="5" rx="2"/>
+    <rect x="154" y="45" width="87" height="5" rx="2"/>
+    <rect x="330" y="45" width="18" height="5" rx="2"/>
+    <rect x="355" y="45" width="62" height="5" rx="2"/>
+  </g>
+  <path d="m130 76 5 4-5 4m200-8 5 4-5 4" stroke="#82bba2" stroke-width="2" fill="none"/>
+  <g fill="#8d99a9">
+    <rect x="143" y="78" width="97" height="4" rx="2"/>
+    <rect x="330" y="96" width="87" height="4" rx="2"/>
+    <rect x="330" y="107" width="64" height="4" rx="2"/>
+    <rect x="343" y="78" width="67" height="4" rx="2"/>
+    <rect x="130" y="99" width="153" height="4" rx="2"/>
+    <rect x="130" y="110" width="131" height="4" rx="2"/>
+    <rect x="130" y="121" width="146" height="4" rx="2"/>
+  </g>
+  <rect x="129" y="140" width="171" height="40" rx="4" fill="#1d3029"/>
+  <g fill="#80b8a1">
+    <rect x="138" y="150" width="106" height="4" rx="2"/>
+    <rect x="138" y="162" width="143" height="4" rx="2"/>
+    <rect x="330" y="132" width="57" height="4" rx="2"/>
+  </g>
+  <path d="m130 199 5 4-5 4" stroke="#97b9e3" stroke-width="2" fill="none"/>
+  <rect x="143" y="198" width="5" height="10" fill="#b5c9e4"/>
+  <circle cx="123" cy="238" r="2" fill="#80b8a1"/>
+  <rect x="131" y="236" width="52" height="3" rx="1.5" fill="#687281"/>
+  <rect x="400" y="236" width="33" height="3" rx="1.5" fill="#687281"/>
+</svg>
